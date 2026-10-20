@@ -31,7 +31,7 @@ def vector_operation(vector1: np.ndarray, vector2: np.ndarray, operation) -> np.
         
     for i in range(x):
         for j in range(y):
-                result_vector[i][j] = opearation(
+                result_vector[i][j] = operation(
                     vector1[i][j],
                     vector2[i][j]
                 )
