@@ -6,14 +6,14 @@ logger = logging.getLogger(__name__)
 
 def vector_operation(vector1: np.ndarray, vector2: np.ndarray, operation) -> np.ndarray:
     
-    vector1 = vector1.astype(np.float32)
-    vector2 = vector2.astype(np.float32)
+    vector1 = vector1.astype(np.float32).reshape(-1,1)
+    vector2 = vector2.astype(np.float32).reshape(-1,1)
     
     ndim_a = vector1.ndim
     ndim_b = vector2.ndim
     
-    if not (ndim_a == 2 and ndim_b == 2):
-        raise ValueError("Invalid dimensions for vector 1 and vector 2 (Expected ndim = 2)")
+    if not (ndim_a == ndim_b):
+        raise ValueError("Invalid dimensions for vector 1 and vector 2")
     
     shape_a = vector1.shape
     shape_b = vector2.shape
@@ -56,7 +56,12 @@ def scalar_multipication(vector: np.ndarray, scalar_quantity: int | float) -> np
             
     return vector
 
+def _validate_vector(vector: np.ndarray) -> None:
+    if vector.ndim > 2:
+        raise ValueError("Vector can have at most 2 dimensions")
 
+    if vector.ndim == 2 and vector.shape[0] != 1 and vector.shape[1] != 1:
+        raise ValueError("Matrix provided; expected a vector")
 
 def dot_product(vector1: np.ndarray, vector2: np.ndarray) -> np.ndarray:
     
@@ -66,32 +71,34 @@ def dot_product(vector1: np.ndarray, vector2: np.ndarray) -> np.ndarray:
     vector1_shape = vector1.shape
     vector2_shape = vector2.shape
     
-    if not (vector1_shape[1] == vector2_shape[0]):
-        logger.error("Dot product failed: shape mismatch - columns of vector 1 (%s) != rows of vector 2 (%s)",
-                     vector1_shape[1],
-                     vector2_shape[0])
-        raise ValueError("Invalid shapes for vector 1 and vector 2")
+    ndim_a = vector1.ndim
+    ndim_b = vector2.ndim
     
-    if (vector1_shape[0] != 1 and vector1_shape[1] != 1) or (vector2_shape[0] != 1 and vector2_shape[1] != 1):
-        logger.error("Dot product failed: matrix provided")
-        raise ValueError("Invalid shapes for vector 1 and 2")
-    
-    result_vector = np.empty(shape=(vector1_shape[0], vector2_shape[1]))
-    
-    for i in range(vector1_shape[0]):
-        for j in range(vector2_shape[1]):
-            z = 0
-            for k in range(vector1_shape[1]):
-                z += vector1[i,k] * vector2[k, j]
-                
-            result_vector[i,j] = z
-            
-    return result_vector
+    if not (ndim_a == ndim_b):
+        raise ValueError("Invalid dimensions for vector 1 and vector 2")
 
-def norm(vector: np.ndarray, norm_kind:Literal['l1', 'l2', 'l-inf'] = 'l2') -> int | float:
+    _validate_vector(vector1)
+    _validate_vector(vector2)
+    
+    if not (vector1.size == vector2.size):
+        raise ValueError("Both vectors should contain same number of elements")
+    
+    vector1 = vector1.reshape(-1,1)
+    vector2 = vector2.reshape(-1,1)
+    
+    result = 0
+    
+    for i in range(vector1.shape[0]):
+            result += vector1[i, 0] * vector2[i, 0]
+            
+    return result
+
+def norm(vector: np.ndarray, norm_kind:Literal['l1', 'l2', 'l-inf'] = 'l2') -> float:
     
     vector = vector.astype(np.float32)
     vector_dim = vector.ndim
+    
+    _validate_vector(vector)
     
     if vector_dim > 2:
         raise ValueError("Vector dimensions can only be one, provided: ", vector_dim)
@@ -103,8 +110,8 @@ def norm(vector: np.ndarray, norm_kind:Literal['l1', 'l2', 'l-inf'] = 'l2') -> i
         case "l2":
             sq_vector = np.square(vector)
             sq_vector_sum = np.sum(sq_vector)
-            l1_norm = np.sqrt(sq_vector_sum)
-            return l1_norm
+            l2_norm = np.sqrt(sq_vector_sum)
+            return l2_norm
             
         case "l1":
             abs_vector = np.abs(vector)
@@ -127,23 +134,12 @@ def distance(vector1: np.ndarray, vector2: np.ndarray, norm_kind:Literal['l1', '
     if vector1_dim != 1 or vector2_dim != 1:
         raise ValueError("Vector dimensions can only be one")
     
-    if not (vector1_dim == vector2_dim):
-        raise ValueError("Both vector's dimensions should be equal dimensions")
+    if vector1.shape != vector2.shape:
+        raise ValueError("Vectors must have the same shape")
     
     dist_vector1_vector2 = vector1 - vector2
     
-    match norm_kind:
-        case 'l1':
-            l1_distance = norm(vector=dist_vector1_vector2, norm_kind='l1')
-            return l1_distance
-        
-        case 'l2':
-            l2_distance = norm(vector=dist_vector1_vector2, norm_kind='l2')
-            return l2_distance
-        
-        case 'l-inf':
-            l_inf_distance = norm(vector=dist_vector1_vector2, norm_kind='l-inf')
-            return l_inf_distance
+    return norm(dist_vector1_vector2, norm_kind)
         
 
 def normalization(vector:np.ndarray) -> np.ndarray:
@@ -153,8 +149,8 @@ def normalization(vector:np.ndarray) -> np.ndarray:
     if l2_norm == 0:
         raise ValueError("Normalization can not be done, vector's magnitude is 0")
     
-    normalzed_vector = vector / l2_norm
-    return normalzed_vector
+    normalized_vector = vector / l2_norm
+    return normalized_vector
 
 def cosine_similarity(vector1: np.ndarray, vector2: np.ndarray) -> float:
     vector1 = vector1.astype(np.float32)
@@ -164,4 +160,4 @@ def cosine_similarity(vector1: np.ndarray, vector2: np.ndarray) -> float:
     vector2_normalized = normalization(vector2)
     
     cos_theta = dot_product(np.transpose(vector1_normalized), vector2_normalized)
-    return cos_theta
+    return float(cos_theta)
