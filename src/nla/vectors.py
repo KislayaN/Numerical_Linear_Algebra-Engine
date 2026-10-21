@@ -5,9 +5,8 @@ from typing import Literal
 logger = logging.getLogger(__name__)
 
 def vector_operation(vector1: np.ndarray, vector2: np.ndarray, operation) -> np.ndarray:
-    
-    vector1 = vector1.astype(np.float32).reshape(-1,1)
-    vector2 = vector2.astype(np.float32).reshape(-1,1)
+    if vector1.shape == (0, ) or vector2.shape == (0, ):
+        raise ValueError("Empty vectors provided")
     
     ndim_a = vector1.ndim
     ndim_b = vector2.ndim
@@ -18,41 +17,41 @@ def vector_operation(vector1: np.ndarray, vector2: np.ndarray, operation) -> np.
     shape_a = vector1.shape
     shape_b = vector2.shape
     
-    result_vector = np.empty(shape=shape_a)
+    result_vector = np.empty_like(vector1, dtype=np.float32)
     
     if not (shape_a == shape_b):
         logger.error("Vector addition failed: shape mismatch %s != %s",
                                 shape_a,
                                 shape_b)
-        raise ValueError("Invalid shapes for vector 1 and vector 2")
-            
-    x, y = shape_a
+        raise ValueError("Invalid shapes for compatibility of vector 1 and vector 2")
     
+    vector1 = vector1.astype(np.float32)
+    vector2 = vector2.astype(np.float32)
         
-    for i in range(x):
-        for j in range(y):
-                result_vector[i][j] = operation(
-                    vector1[i][j],
-                    vector2[i][j]
-                )
+    for i, (a, b) in enumerate(zip(vector1.flat, vector2.flat)):
+        result_vector.flat[i] = operation(a, b)
             
     return result_vector
 
 
 def scalar_multipication(vector: np.ndarray, scalar_quantity: int | float) -> np.ndarray: 
+
     
     if not np.isscalar(scalar_quantity):
         logger.error("Scalar multiplication failed: provided type {%s} for scalar",
                      type(scalar_quantity))
         raise TypeError("A scalar is required for scalar multiplication")
     
+    if not isinstance(scalar_quantity, (int, float)):
+        raise TypeError("Scalar should be int or float")
+    
+    _validate_vector(vector)
+    
     vector = vector.astype(np.float32)
     shape = vector.shape
     
-    for i in range(shape[0]):
-        for j in range(shape[1]):
-            
-            vector[i,j] = vector[i,j] * scalar_quantity
+    for i in range(shape[0]):  
+            vector[i] = vector[i] * scalar_quantity
             
     return vector
 
@@ -65,11 +64,14 @@ def _validate_vector(vector: np.ndarray) -> None:
 
 def dot_product(vector1: np.ndarray, vector2: np.ndarray) -> np.ndarray:
     
+    if vector1.size == 0 or vector2.size == 0:
+        raise ValueError("An empty vector is not allowed")
+    
+    if not isinstance(vector1, np.ndarray) or not isinstance(vector2, np.ndarray):
+        raise TypeError("A vector is required for dot product")
+    
     vector1 = vector1.astype(np.float32)
     vector2 = vector2.astype(np.float32)
-    
-    vector1_shape = vector1.shape
-    vector2_shape = vector2.shape
     
     ndim_a = vector1.ndim
     ndim_b = vector2.ndim
@@ -125,22 +127,29 @@ def norm(vector: np.ndarray, norm_kind:Literal['l1', 'l2', 'l-inf'] = 'l2') -> f
 
          
 def distance(vector1: np.ndarray, vector2: np.ndarray, norm_kind:Literal['l1', 'l2', 'l-inf'] = 'l2') -> int | float:
+    if np.isscalar(vector1) or np.isscalar(vector2):
+        raise ValueError("Expected vector; got scalar")
+   
+    _validate_vector(vector1)
+    _validate_vector(vector2)
+    
     vector1 = vector1.astype(np.float32)
     vector2 = vector2.astype(np.float32)
     
     vector1_dim = vector1.ndim
     vector2_dim = vector2.ndim
     
-    if vector1_dim != 1 or vector2_dim != 1:
-        raise ValueError("Vector dimensions can only be one")
+    if not (vector1_dim == vector2_dim):
+        raise ValueError("Different dimensional vectors are not allowed")
     
     if vector1.shape != vector2.shape:
         raise ValueError("Vectors must have the same shape")
     
-    dist_vector1_vector2 = vector1 - vector2
+    dist_vector1_vector2 = vector_operation(vector1, vector2,
+                                            operation=lambda x,y: x-y)
     
     return norm(dist_vector1_vector2, norm_kind)
-        
+
 
 def normalization(vector:np.ndarray) -> np.ndarray:
     vector = vector.astype(np.float32)
