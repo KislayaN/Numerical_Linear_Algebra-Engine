@@ -2,3 +2,5 @@ venv/
 .venv
 *tempCodeRunnerFile.py
 .vscode
+*__init__.py
+*__pycache__
