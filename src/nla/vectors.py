@@ -64,11 +64,11 @@ def _validate_vector(vector: np.ndarray) -> None:
 
 def dot_product(vector1: np.ndarray, vector2: np.ndarray) -> np.ndarray:
     
-    if vector1.size == 0 or vector2.size == 0:
-        raise ValueError("An empty vector is not allowed")
-    
     if not isinstance(vector1, np.ndarray) or not isinstance(vector2, np.ndarray):
         raise TypeError("A vector is required for dot product")
+    
+    if vector1.size == 0 or vector2.size == 0:
+        raise ValueError("An empty vector is not allowed")
     
     vector1 = vector1.astype(np.float32)
     vector2 = vector2.astype(np.float32)
@@ -102,6 +102,9 @@ def norm(vector: np.ndarray, norm_kind:Literal['l1', 'l2', 'l-inf'] = 'l2') -> f
     
     _validate_vector(vector)
     
+    if norm_kind not in ['l1', 'l2', 'l-inf']:
+        raise ValueError("invalid normalization type provided")
+    
     if vector_dim > 2:
         raise ValueError("Vector dimensions can only be one, provided: ", vector_dim)
     
@@ -129,6 +132,9 @@ def norm(vector: np.ndarray, norm_kind:Literal['l1', 'l2', 'l-inf'] = 'l2') -> f
 def distance(vector1: np.ndarray, vector2: np.ndarray, norm_kind:Literal['l1', 'l2', 'l-inf'] = 'l2') -> int | float:
     if np.isscalar(vector1) or np.isscalar(vector2):
         raise ValueError("Expected vector; got scalar")
+    
+    if norm_kind not in ['l1', 'l2', 'l-inf']:
+        raise ValueError("invalid normalization type provided")
    
     _validate_vector(vector1)
     _validate_vector(vector2)
